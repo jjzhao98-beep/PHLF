@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HCC Transfusion Risk Calculator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩸</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(160deg, #f0f4ff 0%, #e8f4f8 40%, #f5f0ff 100%);
+    padding: 20px 12px 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 520px; margin: 0 auto; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 24px; padding-top: 8px; }
+  .header-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; border-radius: 16px;
+    background: linear-gradient(135deg, #2166AC, #1e40af);
+    font-size: 26px; margin-bottom: 14px;
+    box-shadow: 0 6px 20px rgba(33,102,172,0.35);
+  }
+  .header h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+  .header p { font-size: 13px; color: #64748b; margin-top: 4px; }
+  .header .lang-switch {
+    display: inline-flex; gap: 4px; margin-top: 10px; background: #fff; border-radius: 8px;
+    padding: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .lang-switch button {
+    padding: 5px 14px; border: none; border-radius: 6px; font-size: 12px;
+    font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s;
+  }
+  .lang-switch button.active { background: #2166AC; color: #fff; }
+  .lang-switch button:not(.active) { background: transparent; color: #64748b; }
+
+  /* Card */
+  .card {
+    background: #fff; border-radius: 18px; padding: 24px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+  }
+  .card-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 20px; text-transform: uppercase; }
+
+  /* Input Row */
+  .input-row { margin-bottom: 24px; }
+  .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .input-label { font-size: 13px; font-weight: 600; color: #334155; }
+  .input-number {
+    width: 80px; text-align: right; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    padding: 5px 10px; font-size: 16px; font-weight: 700; font-family: 'Inter', sans-serif;
+    outline: none; transition: border-color 0.2s;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+  }
+  .input-number::-webkit-outer-spin-button,
+  .input-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .input-number:focus { border-color: #2166AC; box-shadow: 0 0 0 3px rgba(33,102,172,0.12); }
+  .input-unit { font-size: 11px; color: #94a3b8; margin-left: 4px; }
+  .input-desc { font-size: 11px; color: #a1a1aa; margin-bottom: 8px; line-height: 1.4; }
+
+  /* Slider */
+  .slider-wrap { position: relative; }
+  .slider-track { height: 6px; border-radius: 3px; background: #e9ecef; position: relative; }
+  .slider-fill { position: absolute; height: 100%; border-radius: 3px; transition: width 0.1s; }
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; appearance: none; height: 28px;
+    background: transparent; cursor: pointer; margin-top: -17px; position: relative; z-index: 2;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; border: 3px solid var(--thumb-color, #2166AC);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type=range]::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--thumb-color, #2166AC);
+    background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; margin-top: 2px; }
+
+  /* Button Group */
+  .btn-group { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-opt {
+    flex: 1; padding: 12px 16px; border-radius: 10px; cursor: pointer;
+    font-size: 14px; font-weight: 500; transition: all 0.2s;
+    border: 2px solid #e2e8f0; background: #fff; color: #64748b;
+    font-family: inherit; text-align: center;
+  }
+  .btn-opt:hover { border-color: #bfdbfe; }
+  .btn-opt.active {
+    border-color: #2166AC; background: linear-gradient(135deg, rgba(33,102,172,0.06), rgba(33,102,172,0.12));
+    color: #2166AC; font-weight: 700; box-shadow: 0 2px 8px rgba(33,102,172,0.12);
+  }
+
+  /* Gauge */
+  .gauge-wrap { text-align: center; padding: 16px 0 4px; }
+  .gauge-prob { font-size: 48px; font-weight: 800; letter-spacing: -2px; margin-top: -6px; transition: color 0.3s; }
+  .risk-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 24px; border-radius: 24px; margin-top: 8px;
+    font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
+    transition: all 0.3s;
+  }
+
+  /* Advice */
+  .advice-box {
+    padding: 16px 18px; border-radius: 12px; margin-top: 16px;
+    transition: all 0.3s;
+  }
+  .advice-title { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .advice-text { font-size: 13px; color: #334155; line-height: 1.6; }
+
+  /* Blood Prep Table */
+  .prep-table { width: 100%; margin-top: 12px; border-collapse: collapse; }
+  .prep-table td {
+    padding: 6px 10px; font-size: 12px; border-top: 1px solid rgba(0,0,0,0.06);
+  }
+  .prep-table td:first-child { font-weight: 600; color: #475569; width: 120px; }
+  .prep-table td:last-child { color: #334155; }
+
+  /* Contribution Bars */
+  .contrib-section { margin-top: 22px; }
+  .contrib-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 12px; }
+  .contrib-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .contrib-name { width: 80px; text-align: right; font-size: 11px; color: #64748b; flex-shrink: 0; font-weight: 500; }
+  .contrib-bar-wrap {
+    flex: 1; height: 12px; border-radius: 6px; background: #f1f5f9;
+    position: relative; overflow: hidden;
+  }
+  .contrib-bar { position: absolute; height: 100%; border-radius: 6px; transition: all 0.3s; }
+  .contrib-midline { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #94a3b8; }
+  .contrib-val {
+    width: 52px; text-align: right; font-size: 11px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Footer */
+  .footer { text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; line-height: 1.7; }
+  .footer a { color: #2166AC; text-decoration: none; }
+  .footer .ver { margin-top: 6px; font-size: 10px; color: #d1d5db; }
+
+  /* Result card dynamic border */
+  .result-card { border-top: 4px solid #22c55e; transition: border-color 0.3s; }
+
+  /* Responsive */
+  @media (max-width: 400px) {
+    .header h1 { font-size: 20px; }
+    .gauge-prob { font-size: 40px; }
+    .input-number { width: 70px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header-icon">🩸</div>
+    <h1 id="title" data-en="HCC Transfusion Risk Calculator" data-zh="肝细胞癌术前输血风险计算器">HCC Transfusion Risk Calculator</h1>
+    <p id="subtitle" data-en="Preoperative prediction for hepatocellular carcinoma surgery" data-zh="肝细胞癌围手术期输血风险术前预测工具">Preoperative prediction for hepatocellular carcinoma surgery</p>
+    <div class="lang-switch">
+      <button class="active" id="lang-en" onclick="setLang('en')">EN</button>
+      <button id="lang-zh" onclick="setLang('zh')">中文</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:#2166AC;" id="param-label" data-en="PATIENT PARAMETERS" data-zh="患者参数">PATIENT PARAMETERS</div>
+
+    <!-- Age -->
+    <div class="input-row">
+      <div class="input-header">
+        <span class="input-label" data-en="Age" data-zh="年龄">Age</span>
+        <div style="display:flex;align-items:center;">
+          <input type="number" class="input-number" id="age-num" value="57" min="18" max="95" step="1" style="color:#6366f1;" oninput="syncFromNum('age')">
+          <span class="input-unit" data-en="years" data-zh="岁">years</span>
+        </div>
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-track"><div class="slider-fill" id="age-fill" style="background:linear-gradient(90deg,#6366f166,#6366f1);"></div></div>
+        <input type="range" id="age" min="18" max="95" step="1" value="57" style="--thumb-color:#6366f1;" oninput="syncFromSlider('age')">
+      </div>
+      <div class="slider-ticks"><span>18</span><span>95</span></div>
+    </div>
+
+    <!-- Hemoglobin -->
+    <div class="input-row">
+      <div class="input-header">
+        <span class="input-label" data-en="Hemoglobin" data-zh="血红蛋白">Hemoglobin</span>
+        <div style="display:flex;align-items:center;">
+          <input type="number" class="input-number" id="hb-num" value="135" min="40" max="200" step="1" style="color:#2166AC;" oninput="syncFromNum('hb')">
+          <span class="input-unit">g/L</span>
+        </div>
+      </div>
+      <div class="input-desc" data-en="Normal: 120–160 g/L (male), 110–150 g/L (female)" data-zh="正常值：男 120–160 g/L，女 110–150 g/L">Normal: 120–160 g/L (male), 110–150 g/L (female)</div>
+      <div class="slider-wrap">
+        <div class="slider-track"><div class="slider-fill" id="hb-fill" style="background:linear-gradient(90deg,#2166AC66,#2166AC);"></div></div>
+        <input type="range" id="hb" min="40" max="200" step="1" value="135" style="--thumb-color:#2166AC;" oninput="syncFromSlider('hb')">
+      </div>
+      <div class="slider-ticks"><span>40</span><span>200</span></div>
+    </div>
+
+    <!-- ALP -->
+    <div class="input-row">
+      <div class="input-header">
+        <span class="input-label" data-en="ALP" data-zh="碱性磷酸酶">ALP</span>
+        <div style="display:flex;align-items:center;">
+          <input type="number" class="input-number" id="alp-num" value="109" min="10" max="500" step="1" style="color:#0891b2;" oninput="syncFromNum('alp')">
+          <span class="input-unit">U/L</span>
+        </div>
+      </div>
+      <div class="input-desc" data-en="Alkaline phosphatase. Normal: 45–125 U/L" data-zh="碱性磷酸酶，正常值：45–125 U/L">Alkaline phosphatase. Normal: 45–125 U/L</div>
+      <div class="slider-wrap">
+        <div class="slider-track"><div class="slider-fill" id="alp-fill" style="background:linear-gradient(90deg,#0891b266,#0891b2);"></div></div>
+        <input type="range" id="alp" min="10" max="500" step="1" value="109" style="--thumb-color:#0891b2;" oninput="syncFromSlider('alp')">
+      </div>
+      <div class="slider-ticks"><span>10</span><span>500</span></div>
+    </div>
+
+    <!-- INR -->
+    <div class="input-row">
+      <div class="input-header">
+        <span class="input-label">INR</span>
+        <div style="display:flex;align-items:center;">
+          <input type="number" class="input-number" id="inr-num" value="1.04" min="0.80" max="3.00" step="0.01" style="color:#7c3aed;" oninput="syncFromNum('inr')">
+        </div>
+      </div>
+      <div class="input-desc" data-en="Normal: 0.85–1.15" data-zh="正常值：0.85–1.15">Normal: 0.85–1.15</div>
+      <div class="slider-wrap">
+        <div class="slider-track"><div class="slider-fill" id="inr-fill" style="background:linear-gradient(90deg,#7c3aed66,#7c3aed);"></div></div>
+        <input type="range" id="inr" min="0.80" max="3.00" step="0.01" value="1.04" style="--thumb-color:#7c3aed;" oninput="syncFromSlider('inr')">
+      </div>
+      <div class="slider-ticks"><span>0.80</span><span>3.00</span></div>
+    </div>
+
+    <!-- ALBI（由白蛋白+总胆红素自动计算） -->
+    <div class="input-row" style="background:#f0fdfa;border-radius:12px;padding:16px 14px;margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="input-label" data-en="ALBI Score (auto-calculated)" data-zh="ALBI 评分（自动计算）">ALBI Score (auto-calculated)</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="albi-display" style="font-size:22px;font-weight:800;color:#0d9488;font-variant-numeric:tabular-nums;">-2.64</span>
+          <span id="albi-grade-badge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;background:#d1fae5;color:#059669;">Grade 1</span>
+        </div>
+      </div>
+
+      <!-- 白蛋白 -->
+      <div style="margin-bottom:14px;">
+        <div class="input-header">
+          <span style="font-size:12px;font-weight:600;color:#475569;" data-en="Albumin" data-zh="白蛋白">Albumin</span>
+          <div style="display:flex;align-items:center;">
+            <input type="number" class="input-number" id="albumin-num" value="40" min="10" max="60" step="0.1" style="color:#0d9488;width:75px;font-size:15px;" oninput="calcALBI()">
+            <span class="input-unit">g/L</span>
+          </div>
+        </div>
+        <div class="input-desc" data-en="Normal: 35–55 g/L" data-zh="正常值：35–55 g/L">Normal: 35–55 g/L</div>
+        <div class="slider-wrap">
+          <div class="slider-track"><div class="slider-fill" id="albumin-fill" style="background:linear-gradient(90deg,#0d948866,#0d9488);"></div></div>
+          <input type="range" id="albumin-slider" min="10" max="60" step="0.1" value="40" style="--thumb-color:#0d9488;" oninput="syncAlbuminSlider()">
+        </div>
+        <div class="slider-ticks"><span>10</span><span>60</span></div>
+      </div>
+
+      <!-- 总胆红素 -->
+      <div>
+        <div class="input-header">
+          <span style="font-size:12px;font-weight:600;color:#475569;" data-en="Total Bilirubin" data-zh="总胆红素">Total Bilirubin</span>
+          <div style="display:flex;align-items:center;">
+            <input type="number" class="input-number" id="tbil-num" value="15" min="1" max="200" step="0.1" style="color:#0d9488;width:75px;font-size:15px;" oninput="calcALBI()">
+            <span class="input-unit" data-en="μmol/L" data-zh="μmol/L">μmol/L</span>
+          </div>
+        </div>
+        <div class="input-desc" data-en="Normal: 3.4–20.5 μmol/L" data-zh="正常值：3.4–20.5 μmol/L">Normal: 3.4–20.5 μmol/L</div>
+        <div class="slider-wrap">
+          <div class="slider-track"><div class="slider-fill" id="tbil-fill" style="background:linear-gradient(90deg,#0d948866,#0d9488);"></div></div>
+          <input type="range" id="tbil-slider" min="1" max="200" step="0.1" value="15" style="--thumb-color:#0d9488;" oninput="syncTbilSlider()">
+        </div>
+        <div class="slider-ticks"><span>1</span><span>200</span></div>
+      </div>
+
+      <!-- ALBI公式说明 -->
+      <div style="margin-top:10px;font-size:10px;color:#94a3b8;text-align:center;" data-en="ALBI = log₁₀(Bilirubin μmol/L) × 0.66 + Albumin g/L × (−0.085)" data-zh="ALBI = log₁₀(胆红素 μmol/L) × 0.66 + 白蛋白 g/L × (−0.085)">ALBI = log₁₀(Bilirubin μmol/L) × 0.66 + Albumin g/L × (−0.085)</div>
+    </div>
+
+    <!-- ECOG-PS -->
+    <div class="input-row">
+      <div class="input-header">
+        <span class="input-label">ECOG-PS</span>
+        <div style="display:flex;align-items:center;">
+          <input type="number" class="input-number" id="ecog-num" value="0" min="0" max="4" step="1" style="color:#dc2626;" oninput="syncFromNum('ecog')">
+        </div>
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-track"><div class="slider-fill" id="ecog-fill" style="background:linear-gradient(90deg,#dc262666,#dc2626);"></div></div>
+        <input type="range" id="ecog" min="0" max="4" step="1" value="0" style="--thumb-color:#dc2626;" oninput="syncFromSlider('ecog')">
+      </div>
+      <div class="slider-ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
+    </div>
+
+    <!-- Tumor Number -->
+    <div class="input-row">
+      <div class="input-header">
+        <span class="input-label" data-en="Tumor Number" data-zh="肿瘤数量">Tumor Number</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn-opt active" id="btn-single" onclick="setTumor('single')" data-en="Single" data-zh="单发">Single</button>
+        <button class="btn-opt" id="btn-multiple" onclick="setTumor('multiple')" data-en="Multiple" data-zh="多发">Multiple</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Card -->
+  <div class="card result-card" id="result-card">
+    <div class="card-label" id="result-label" style="color:#22c55e;" data-en="PREDICTION RESULT" data-zh="预测结果">PREDICTION RESULT</div>
+
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 200 120" width="240" style="overflow:visible;">
+        <defs>
+          <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#22c55e"/>
+            <stop offset="30%" stop-color="#a3e635"/>
+            <stop offset="50%" stop-color="#facc15"/>
+            <stop offset="70%" stop-color="#f97316"/>
+            <stop offset="100%" stop-color="#ef4444"/>
+          </linearGradient>
+          <filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.2"/></filter>
+        </defs>
+        <path d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke="#f1f5f9" stroke-width="16" stroke-linecap="round"/>
+        <path d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke="url(#gg)" stroke-width="16" stroke-linecap="round"/>
+        <line id="needle" x1="100" y1="105" x2="38" y2="105" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" filter="url(#shadow)"/>
+        <circle cx="100" cy="105" r="6" fill="#1e293b"/>
+        <circle cx="100" cy="105" r="2.5" fill="#fff"/>
+        <text x="10" y="118" font-size="9" fill="#94a3b8" text-anchor="middle">0%</text>
+        <text x="100" y="14" font-size="9" fill="#94a3b8" text-anchor="middle">50%</text>
+        <text x="190" y="118" font-size="9" fill="#94a3b8" text-anchor="middle">100%</text>
+      </svg>
+      <div class="gauge-prob" id="prob-text">28.5%</div>
+      <div class="risk-badge" id="risk-badge"><span id="risk-icon">✓</span> <span id="risk-text">Low Risk</span></div>
+    </div>
+
+    <div class="advice-box" id="advice-box">
+      <div class="advice-title" id="advice-title" data-en="Clinical Recommendation" data-zh="临床建议">Clinical Recommendation</div>
+      <div class="advice-text" id="advice-text"></div>
+      <table class="prep-table" id="prep-table"></table>
+    </div>
+
+    <div class="contrib-section">
+      <div class="contrib-title" id="contrib-label" data-en="Variable contributions to risk" data-zh="各变量对风险的贡献">Variable contributions to risk</div>
+      <div id="contrib-bars"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>7-variable logistic regression · AUC 0.90 · C-index 0.89 · Validation AUC 0.87</div>
+    <div id="disclaimer" data-en="For clinical decision support only. Not a substitute for clinical judgment." data-zh="仅供临床决策参考，不能替代医生判断。">For clinical decision support only. Not a substitute for clinical judgment.</div>
+    <div class="ver">HCC Perioperative Transfusion Risk Prediction Tool v1.0</div>
+  </div>
+</div>
+
+<script>
+const B0 = -8.914243;
+const B = { age:-0.05958321, hb:0.014564080, alp:-0.004087084, inr:3.236797035, ts:1.671006216, ecog:2.982574109, albi:-1.746737337 };
+
+let tumorSingle = 1, lang = 'en';
+
+const TEXTS = {
+  en: {
+    low: { level:'Low Risk', icon:'✓', advice:'Routine blood preparation recommended.',
+      prep:[['Crossmatch','2U pRBC'],['Cell saver','Not required'],['ICU alert','No'],['Special note','Standard protocol']] },
+    mod: { level:'Moderate Risk', icon:'⚠', advice:'Enhanced blood preparation recommended.',
+      prep:[['Crossmatch','4U pRBC'],['Cell saver','Standby'],['ICU alert','Notify'],['Special note','Confirm blood bank availability']] },
+    high:{ level:'High Risk', icon:'✕', advice:'Maximum blood preparation. Consider multidisciplinary discussion.',
+      prep:[['Crossmatch','≥6U pRBC + FFP'],['Cell saver','Required'],['ICU alert','Reserve bed'],['Special note','Consider staged approach']] }
+  },
+  zh: {
+    low: { level:'低风险', icon:'✓', advice:'常规术前备血即可。',
+      prep:[['交叉配血','2U 红细胞悬液'],['自体血回输','无需准备'],['ICU通知','否'],['特别说明','按常规流程准备']] },
+    mod: { level:'中等风险', icon:'⚠', advice:'建议加强备血，提前通知血库。',
+      prep:[['交叉配血','4U 红细胞悬液'],['自体血回输','待命'],['ICU通知','提前告知'],['特别说明','确认血库库存充足']] },
+    high:{ level:'高风险', icon:'✕', advice:'需最大量备血，建议MDT讨论手术方案。',
+      prep:[['交叉配血','≥6U 红细胞 + 新鲜冰冻血浆'],['自体血回输','必须准备'],['ICU通知','预留床位'],['特别说明','考虑分期手术或介入降期']] }
+  }
+};
+
+function setLang(l) {
+  lang = l;
+  document.getElementById('lang-en').className = l==='en' ? 'active' : '';
+  document.getElementById('lang-zh').className = l==='zh' ? 'active' : '';
+  document.querySelectorAll('[data-'+l+']').forEach(el => { el.textContent = el.getAttribute('data-'+l); });
+  calc();
+}
+
+function setTumor(v) {
+  tumorSingle = v==='single' ? 1 : 0;
+  document.getElementById('btn-single').className = 'btn-opt' + (v==='single' ? ' active' : '');
+  document.getElementById('btn-multiple').className = 'btn-opt' + (v==='multiple' ? ' active' : '');
+  calc();
+}
+
+function syncFromSlider(id) {
+  const v = document.getElementById(id).value;
+  document.getElementById(id+'-num').value = v;
+  calc();
+}
+
+function syncFromNum(id) {
+  const el = document.getElementById(id+'-num');
+  let v = parseFloat(el.value);
+  const slider = document.getElementById(id);
+  const mn = parseFloat(slider.min), mx = parseFloat(slider.max);
+  if (isNaN(v)) return;
+  v = Math.max(mn, Math.min(mx, v));
+  slider.value = v;
+  calc();
+}
+
+// ---- ALBI自动计算 ----
+let currentALBI = -2.64;
+
+function calcALBI() {
+  const alb = parseFloat(document.getElementById('albumin-num').value);
+  const tbil = parseFloat(document.getElementById('tbil-num').value);
+  if (isNaN(alb) || isNaN(tbil) || tbil <= 0) return;
+
+  // ALBI = log10(bilirubin μmol/L) × 0.66 + albumin g/L × (-0.085)
+  currentALBI = Math.log10(tbil) * 0.66 + alb * (-0.085);
+  currentALBI = Math.round(currentALBI * 100) / 100;
+
+  document.getElementById('albi-display').textContent = currentALBI.toFixed(2);
+
+  // ALBI分级标签
+  const badge = document.getElementById('albi-grade-badge');
+  if (currentALBI <= -2.60) {
+    badge.textContent = 'Grade 1';
+    badge.style.background = '#d1fae5'; badge.style.color = '#059669';
+  } else if (currentALBI <= -1.39) {
+    badge.textContent = 'Grade 2';
+    badge.style.background = '#fef3c7'; badge.style.color = '#d97706';
+  } else {
+    badge.textContent = 'Grade 3';
+    badge.style.background = '#fee2e2'; badge.style.color = '#dc2626';
+  }
+
+  // 更新滑块填充
+  fillBar('albumin', alb, 10, 60);
+  fillBar('tbil', tbil, 1, 200);
+
+  calc();
+}
+
+function syncAlbuminSlider() {
+  document.getElementById('albumin-num').value = document.getElementById('albumin-slider').value;
+  calcALBI();
+}
+
+function syncTbilSlider() {
+  document.getElementById('tbil-num').value = document.getElementById('tbil-slider').value;
+  calcALBI();
+}
+
+function fillBar(id, val, min, max) {
+  document.getElementById(id+'-fill').style.width = ((val-min)/(max-min)*100)+'%';
+}
+
+function calc() {
+  const age = +document.getElementById('age').value;
+  const hb = +document.getElementById('hb').value;
+  const alp = +document.getElementById('alp').value;
+  const inr = +document.getElementById('inr').value;
+  const albi = currentALBI;
+  const ecog = +document.getElementById('ecog').value;
+
+  fillBar('age',age,18,95); fillBar('hb',hb,40,200); fillBar('alp',alp,10,500);
+  fillBar('inr',inr,0.80,3.00); fillBar('ecog',ecog,0,4);
+
+  const logit = B0 + B.age*age + B.hb*hb + B.alp*alp + B.inr*inr + B.ts*tumorSingle + B.ecog*ecog + B.albi*albi;
+  const prob = 1/(1+Math.exp(-logit));
+  const pct = prob*100;
+
+  let rk; const t = TEXTS[lang];
+  if (prob<0.3) rk = {color:'#22c55e',bg:'#f0fdf4',border:'#bbf7d0',...t.low};
+  else if (prob<0.6) rk = {color:'#f59e0b',bg:'#fffbeb',border:'#fde68a',...t.mod};
+  else rk = {color:'#ef4444',bg:'#fef2f2',border:'#fecaca',...t.high};
+
+  // Needle — 0%=left(180°), 50%=top(90°), 100%=right(0°)
+  const ang = (1 - prob) * 180;
+  const rad = ang * Math.PI / 180;
+  document.getElementById('needle').setAttribute('x2', 100 + 62 * Math.cos(rad));
+  document.getElementById('needle').setAttribute('y2', 105 - 62 * Math.sin(rad));
+
+  document.getElementById('prob-text').textContent = pct.toFixed(1)+'%';
+  document.getElementById('prob-text').style.color = rk.color;
+
+  const badge = document.getElementById('risk-badge');
+  badge.style.background = rk.bg; badge.style.border = '1.5px solid '+rk.border; badge.style.color = rk.color;
+  document.getElementById('risk-icon').textContent = rk.icon;
+  document.getElementById('risk-text').textContent = rk.level;
+
+  document.getElementById('result-card').style.borderTopColor = rk.color;
+  document.getElementById('result-label').style.color = rk.color;
+
+  const ab = document.getElementById('advice-box');
+  ab.style.background = rk.bg; ab.style.border = '1px solid '+rk.border;
+  document.getElementById('advice-title').style.color = rk.color;
+  document.getElementById('advice-text').textContent = rk.advice;
+
+  let ptHtml = '';
+  rk.prep.forEach(r => { ptHtml += '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'; });
+  document.getElementById('prep-table').innerHTML = ptHtml;
+
+  // Contributions
+  const names = lang==='zh'
+    ? ['年龄','血红蛋白','碱性磷酸酶','INR','肿瘤数量','ECOG-PS','ALBI']
+    : ['Age','Hb','ALP','INR','Tumor','ECOG','ALBI'];
+  const contribs = [
+    {name:names[0],val:B.age*age},{name:names[1],val:B.hb*hb},{name:names[2],val:B.alp*alp},
+    {name:names[3],val:B.inr*inr},{name:names[4],val:B.ts*tumorSingle},
+    {name:names[5],val:B.ecog*ecog},{name:names[6],val:B.albi*albi}
+  ].sort((a,b)=>Math.abs(b.val)-Math.abs(a.val));
+
+  const mx = Math.max(...contribs.map(c=>Math.abs(c.val)),0.01);
+  let ch = '';
+  contribs.forEach(c => {
+    const pw = (Math.abs(c.val)/mx)*50;
+    const pos = c.val>=0;
+    const bc = pos?'#ef4444':'#2166AC';
+    const lf = pos?'50%':(50-pw)+'%';
+    ch += '<div class="contrib-row"><div class="contrib-name">'+c.name+'</div>'+
+      '<div class="contrib-bar-wrap"><div class="contrib-bar" style="width:'+pw+'%;left:'+lf+';background:'+bc+';opacity:0.65;"></div>'+
+      '<div class="contrib-midline"></div></div>'+
+      '<div class="contrib-val" style="color:'+bc+';">'+(pos?'+':'')+c.val.toFixed(2)+'</div></div>';
+  });
+  document.getElementById('contrib-bars').innerHTML = ch;
+}
+
+calc();
+</script>
+</body>
+</html>
