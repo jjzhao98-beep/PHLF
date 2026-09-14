@@ -1,543 +1,1025 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>HCC Transfusion Risk Calculator</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩸</text></svg>">
+<title>HCC PHLF Risk Assessment</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #1e3d70;
+    --primary-2: #2c5aa0;
+    --primary-3: #3498db;
+    --panel: #ffffff;
+    --text: #2c3e50;
+    --text-mute: #7f8c8d;
+    --border: #e1e8ed;
+
+    /* 四层风险色系 */
+    --low: #16a085; --low-2: #1abc9c;         /* 绿 */
+    --mod: #f1c40f; --mod-2: #f39c12;         /* 黄 */
+    --high: #e67e22; --high-2: #d35400;       /* 橙 */
+    --extreme: #c0392b; --extreme-2: #922b21; /* 红 */
+
+    --shadow-sm: 0 1px 3px rgba(30,61,112,0.06);
+    --shadow-md: 0 4px 12px rgba(30,61,112,0.08);
+    --shadow-lg: 0 10px 25px rgba(30,61,112,0.12);
+    --shadow-xl: 0 20px 40px rgba(30,61,112,0.15);
+  }
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    min-height: 100vh;
-    background: linear-gradient(160deg, #f0f4ff 0%, #e8f4f8 40%, #f5f0ff 100%);
-    padding: 20px 12px 40px;
-    -webkit-font-smoothing: antialiased;
+    font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    background: linear-gradient(180deg, #eef2f7 0%, #dde5ef 100%);
+    min-height: 100vh; color: var(--text); line-height: 1.55;
   }
-  .container { max-width: 520px; margin: 0 auto; }
+  .header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    color: white; padding: 22px 40px;
+    box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: ''; position: absolute; top: -50%; right: -10%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  }
+  .header-inner {
+    display: flex; justify-content: space-between; align-items: center;
+    max-width: 1280px; margin: 0 auto; position: relative; z-index: 1;
+  }
+  .header h1 { font-size: 22px; font-weight: 500; letter-spacing: 0.3px; }
+  .lang-toggle {
+    background: rgba(255,255,255,0.15); color: white;
+    border: 1px solid rgba(255,255,255,0.35);
+    padding: 8px 18px; border-radius: 22px;
+    cursor: pointer; font-size: 14px; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .lang-toggle:hover {
+    background: rgba(255,255,255,0.28);
+    transform: translateY(-1px);
+  }
+  .container {
+    max-width: 1280px; margin: 24px auto; padding: 0 24px;
+    display: grid;
+    grid-template-columns: minmax(440px, 5fr) minmax(440px, 7fr);
+    gap: 22px; align-items: start;
+  }
+  @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
 
-  /* Header */
-  .header { text-align: center; margin-bottom: 24px; padding-top: 8px; }
-  .header-icon {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 56px; height: 56px; border-radius: 16px;
-    background: linear-gradient(135deg, #2166AC, #1e40af);
-    font-size: 26px; margin-bottom: 14px;
-    box-shadow: 0 6px 20px rgba(33,102,172,0.35);
+  .panel {
+    background: var(--panel); border-radius: 14px;
+    padding: 24px 26px; box-shadow: var(--shadow-md);
+    border: 1px solid rgba(255,255,255,0.7);
+    transition: box-shadow 0.25s;
   }
-  .header h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
-  .header p { font-size: 13px; color: #64748b; margin-top: 4px; }
-  .header .lang-switch {
-    display: inline-flex; gap: 4px; margin-top: 10px; background: #fff; border-radius: 8px;
-    padding: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  .panel:hover { box-shadow: var(--shadow-lg); }
+  .panel h3 {
+    font-size: 16px; font-weight: 600; color: var(--primary);
+    padding-bottom: 12px; margin-bottom: 18px;
+    border-bottom: 2px solid #f0f4f8;
+    display: flex; align-items: center; gap: 8px;
   }
-  .lang-switch button {
-    padding: 5px 14px; border: none; border-radius: 6px; font-size: 12px;
-    font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s;
-  }
-  .lang-switch button.active { background: #2166AC; color: #fff; }
-  .lang-switch button:not(.active) { background: transparent; color: #64748b; }
-
-  /* Card */
-  .card {
-    background: #fff; border-radius: 18px; padding: 24px 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
-    margin-bottom: 16px;
-  }
-  .card-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 20px; text-transform: uppercase; }
-
-  /* Input Row */
-  .input-row { margin-bottom: 24px; }
-  .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-  .input-label { font-size: 13px; font-weight: 600; color: #334155; }
-  .input-number {
-    width: 80px; text-align: right; border: 1.5px solid #e2e8f0; border-radius: 8px;
-    padding: 5px 10px; font-size: 16px; font-weight: 700; font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color 0.2s;
-    font-variant-numeric: tabular-nums;
-    -moz-appearance: textfield;
-  }
-  .input-number::-webkit-outer-spin-button,
-  .input-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .input-number:focus { border-color: #2166AC; box-shadow: 0 0 0 3px rgba(33,102,172,0.12); }
-  .input-unit { font-size: 11px; color: #94a3b8; margin-left: 4px; }
-  .input-desc { font-size: 11px; color: #a1a1aa; margin-bottom: 8px; line-height: 1.4; }
-
-  /* Slider */
-  .slider-wrap { position: relative; }
-  .slider-track { height: 6px; border-radius: 3px; background: #e9ecef; position: relative; }
-  .slider-fill { position: absolute; height: 100%; border-radius: 3px; transition: width 0.1s; }
-  input[type=range] {
-    width: 100%; -webkit-appearance: none; appearance: none; height: 28px;
-    background: transparent; cursor: pointer; margin-top: -17px; position: relative; z-index: 2;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
-    background: #fff; border: 3px solid var(--thumb-color, #2166AC);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: transform 0.15s;
-  }
-  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
-  input[type=range]::-moz-range-thumb {
-    width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--thumb-color, #2166AC);
-    background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  }
-  .slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; margin-top: 2px; }
-
-  /* Button Group */
-  .btn-group { display: flex; gap: 10px; margin-top: 8px; }
-  .btn-opt {
-    flex: 1; padding: 12px 16px; border-radius: 10px; cursor: pointer;
-    font-size: 14px; font-weight: 500; transition: all 0.2s;
-    border: 2px solid #e2e8f0; background: #fff; color: #64748b;
-    font-family: inherit; text-align: center;
-  }
-  .btn-opt:hover { border-color: #bfdbfe; }
-  .btn-opt.active {
-    border-color: #2166AC; background: linear-gradient(135deg, rgba(33,102,172,0.06), rgba(33,102,172,0.12));
-    color: #2166AC; font-weight: 700; box-shadow: 0 2px 8px rgba(33,102,172,0.12);
+  .panel h3::before {
+    content: ''; width: 4px; height: 16px;
+    background: linear-gradient(180deg, var(--primary-2), var(--primary-3));
+    border-radius: 2px;
   }
 
-  /* Gauge */
-  .gauge-wrap { text-align: center; padding: 16px 0 4px; }
-  .gauge-prob { font-size: 48px; font-weight: 800; letter-spacing: -2px; margin-top: -6px; transition: color 0.3s; }
-  .risk-badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 7px 24px; border-radius: 24px; margin-top: 8px;
-    font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
-    transition: all 0.3s;
+  .section-label {
+    font-size: 11px; font-weight: 600; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 16px 0 10px 0;
+    padding-bottom: 6px; border-bottom: 1px dashed #dce4ec;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .input-group { margin-bottom: 16px; }
+  .input-label {
+    font-size: 13px; font-weight: 500;
+    color: var(--text); margin-bottom: 6px; display: block;
+  }
+  .input-row {
+    display: grid; grid-template-columns: 85px 1fr;
+    gap: 12px; align-items: center;
+  }
+  .input-row input[type="number"] {
+    padding: 7px 8px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13.5px; font-weight: 500;
+    text-align: center; background: #fafbfc;
+    transition: all 0.2s; width: 100%; font-family: inherit;
+  }
+  .input-row input[type="number"]:focus {
+    outline: none; border-color: var(--primary-3);
+    background: white; box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
+  }
+  .slider-wrap { position: relative; padding: 3px 0; }
+  .input-row input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 5px;
+    background: #e1e8ed; border-radius: 3px;
+    outline: none; cursor: pointer;
+  }
+  .input-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; background: white;
+    border: 3px solid var(--primary-2); border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(30,61,112,0.25);
+    transition: all 0.15s;
+  }
+  .input-row input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 3px 8px rgba(30,61,112,0.35);
+  }
+  .input-row input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px; background: white;
+    border: 3px solid var(--primary-2); border-radius: 50%;
+    cursor: pointer;
+  }
+  .hint {
+    color: var(--text-mute); font-size: 11px;
+    margin-top: 4px; margin-left: 97px;
   }
 
-  /* Advice */
-  .advice-box {
-    padding: 16px 18px; border-radius: 12px; margin-top: 16px;
-    transition: all 0.3s;
+  select {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13.5px; background: #fafbfc;
+    font-family: inherit; cursor: pointer;
+    transition: all 0.2s;
   }
-  .advice-title { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
-  .advice-text { font-size: 13px; color: #334155; line-height: 1.6; }
-
-  /* Blood Prep Table */
-  .prep-table { width: 100%; margin-top: 12px; border-collapse: collapse; }
-  .prep-table td {
-    padding: 6px 10px; font-size: 12px; border-top: 1px solid rgba(0,0,0,0.06);
+  select:focus {
+    outline: none; border-color: var(--primary-3);
+    background: white; box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
   }
-  .prep-table td:first-child { font-weight: 600; color: #475569; width: 120px; }
-  .prep-table td:last-child { color: #334155; }
 
-  /* Contribution Bars */
-  .contrib-section { margin-top: 22px; }
-  .contrib-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 12px; }
-  .contrib-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .contrib-name { width: 80px; text-align: right; font-size: 11px; color: #64748b; flex-shrink: 0; font-weight: 500; }
-  .contrib-bar-wrap {
-    flex: 1; height: 12px; border-radius: 6px; background: #f1f5f9;
+  /* 自动计算框 - 带彩色分级 */
+  .auto-box {
+    padding: 10px 14px; border-radius: 6px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 13.5px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    margin-bottom: 4px;
+    border-left: 4px solid #ccc;
+    transition: all 0.25s;
+  }
+  .auto-box.grade-low {
+    background: linear-gradient(135deg, #d5f5e3, #a9dfbf);
+    border-left-color: var(--low);
+    color: #0e6655;
+  }
+  .auto-box.grade-mid {
+    background: linear-gradient(135deg, #fcf3cf, #f9e79f);
+    border-left-color: var(--mod-2);
+    color: #7d6608;
+  }
+  .auto-box.grade-high {
+    background: linear-gradient(135deg, #fadbd8, #f5b7b1);
+    border-left-color: var(--extreme);
+    color: #7b241c;
+  }
+  .auto-box.grade-none {
+    background: linear-gradient(135deg, #eef7f9, #dbeef2);
+    border-left-color: var(--primary-2);
+    color: var(--primary);
+  }
+  .auto-grade {
+    background: white; padding: 2px 10px;
+    border-radius: 10px; font-size: 11px;
+    border: 1px solid rgba(0,0,0,0.1);
+    font-weight: 500;
+  }
+
+  .btn-calc {
+    background: linear-gradient(135deg, var(--primary), var(--primary-3));
+    color: white; border: none;
+    padding: 13px; width: 100%;
+    font-size: 15px; font-weight: 600;
+    border-radius: 8px; cursor: pointer;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(30,61,112,0.25);
+    transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-calc:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(30,61,112,0.35);
+  }
+  .btn-calc:active { transform: translateY(0); }
+
+  .disclaimer {
+    text-align: center; color: var(--text-mute);
+    font-size: 10.5px; margin-top: 14px;
+  }
+
+  /* 四层风险背景 */
+  .risk-box {
+    padding: 32px 28px; border-radius: 14px;
+    text-align: center; color: white;
+    margin-bottom: 18px;
     position: relative; overflow: hidden;
+    box-shadow: var(--shadow-xl);
   }
-  .contrib-bar { position: absolute; height: 100%; border-radius: 6px; transition: all 0.3s; }
-  .contrib-midline { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #94a3b8; }
-  .contrib-val {
-    width: 52px; text-align: right; font-size: 11px; font-weight: 700;
-    font-variant-numeric: tabular-nums;
+  .risk-box::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 60%);
+  }
+  .risk-low     { background: linear-gradient(135deg, var(--low), var(--low-2)); }
+  .risk-mod     { background: linear-gradient(135deg, var(--mod), var(--mod-2)); }
+  .risk-high    { background: linear-gradient(135deg, var(--high), var(--high-2)); }
+  .risk-extreme { background: linear-gradient(135deg, var(--extreme), var(--extreme-2)); }
+  .risk-prob {
+    font-size: 52px; font-weight: 300;
+    letter-spacing: -1.5px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: relative; z-index: 1;
+  }
+  .risk-label {
+    font-size: 17px; margin-top: 8px;
+    font-weight: 500; letter-spacing: 0.3px;
+    position: relative; z-index: 1;
+  }
+  .risk-ci {
+    font-size: 12px; margin-top: 6px;
+    opacity: 0.9; position: relative; z-index: 1;
+  }
+  .risk-def-btn {
+    position: absolute; top: 12px; right: 14px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white; font-size: 11px;
+    padding: 4px 10px; border-radius: 12px;
+    cursor: pointer; z-index: 2;
+    transition: all 0.2s;
+  }
+  .risk-def-btn:hover { background: rgba(255,255,255,0.35); }
+
+  /* 分级说明面板 */
+  .tier-def-panel {
+    background: #f8f9fa; padding: 16px 18px;
+    border-radius: 8px; margin-top: -8px; margin-bottom: 18px;
+    border: 1px solid #e5e9ef;
+    font-size: 12.5px; line-height: 1.7;
+  }
+  .tier-def-panel h5 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-mute); margin-bottom: 10px; font-weight: 600;
+  }
+  .tier-def-row {
+    display: grid; grid-template-columns: 90px 100px 1fr;
+    gap: 12px; padding: 6px 0;
+    border-bottom: 1px solid #ecf0f1;
+  }
+  .tier-def-row:last-child { border-bottom: none; }
+  .tier-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 500; color: white;
+  }
+  .tier-badge.low     { background: var(--low); }
+  .tier-badge.mod     { background: var(--mod-2); }
+  .tier-badge.high    { background: var(--high); }
+  .tier-badge.extreme { background: var(--extreme); }
+
+  /* 术式对比表 */
+  .compare-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+  }
+  .compare-table th {
+    background: #f4f6f9; color: var(--text-mute);
+    font-weight: 500; padding: 10px 12px;
+    text-align: left; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border);
+  }
+  .compare-table td {
+    padding: 12px; border-bottom: 1px solid #f0f4f8;
+  }
+  .compare-table tr.current {
+    background: linear-gradient(90deg, rgba(52,152,219,0.08), transparent);
+    border-left: 3px solid var(--primary-3);
+    font-weight: 600;
+  }
+  .compare-table tr:hover:not(.current) { background: #fafbfc; }
+  .delta {
+    font-size: 11px; color: var(--text-mute); margin-left: 6px;
+  }
+  .delta.up { color: var(--extreme); font-weight: 600; }
+  .delta.down { color: var(--low); font-weight: 600; }
+
+  .advice-list { list-style: none; }
+  .advice-list li {
+    padding: 10px 0 10px 26px; position: relative;
+    border-bottom: 1px solid #f4f6f9; font-size: 13.5px;
+    transition: all 0.15s;
+  }
+  .advice-list li:last-child { border-bottom: none; }
+  .advice-list li::before {
+    content: '›'; position: absolute; left: 10px;
+    color: var(--primary-3); font-weight: bold;
+    font-size: 18px; top: 8px;
+  }
+  .advice-list li:hover { background: #fafbfc; padding-left: 30px; }
+
+  .record-box {
+    background: linear-gradient(180deg, #fafbfc, #f4f6f9);
+    padding: 16px 18px; border-radius: 8px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 12.5px; white-space: pre-wrap;
+    line-height: 1.7;
+    border-left: 4px solid var(--primary-3);
+    color: var(--text);
   }
 
-  /* Footer */
-  .footer { text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; line-height: 1.7; }
-  .footer a { color: #2166AC; text-decoration: none; }
-  .footer .ver { margin-top: 6px; font-size: 10px; color: #d1d5db; }
-
-  /* Result card dynamic border */
-  .result-card { border-top: 4px solid #22c55e; transition: border-color 0.3s; }
-
-  /* Responsive */
-  @media (max-width: 400px) {
-    .header h1 { font-size: 20px; }
-    .gauge-prob { font-size: 40px; }
-    .input-number { width: 70px; font-size: 14px; }
+  .empty-state {
+    text-align: center; padding: 80px 30px;
+    color: var(--text-mute); font-size: 14px;
+  }
+  .empty-state-icon {
+    font-size: 48px; opacity: 0.3;
+    margin-bottom: 15px; display: block;
   }
 </style>
 </head>
 <body>
 
+<div class="header">
+  <div class="header-inner">
+    <h1 id="title">HCC 术前 PHLF 风险评估与手术决策辅助系统</h1>
+    <button class="lang-toggle" id="langBtn" onclick="toggleLang()">EN</button>
+  </div>
+</div>
+
 <div class="container">
-  <div class="header">
-    <div class="header-icon">🩸</div>
-    <h1 id="title" data-en="HCC Transfusion Risk Calculator" data-zh="肝细胞癌术前输血风险计算器">HCC Transfusion Risk Calculator</h1>
-    <p id="subtitle" data-en="Preoperative prediction for hepatocellular carcinoma surgery" data-zh="肝细胞癌围手术期输血风险术前预测工具">Preoperative prediction for hepatocellular carcinoma surgery</p>
-    <div class="lang-switch">
-      <button class="active" id="lang-en" onclick="setLang('en')">EN</button>
-      <button id="lang-zh" onclick="setLang('zh')">中文</button>
-    </div>
-  </div>
+  <!-- Input panel -->
+  <div class="panel">
+    <h3 id="patientInfo">患者信息</h3>
 
-  <div class="card">
-    <div class="card-label" style="color:#2166AC;" id="param-label" data-en="PATIENT PARAMETERS" data-zh="患者参数">PATIENT PARAMETERS</div>
+    <div class="section-label" id="secReserve">肝功能储备指标</div>
 
-    <!-- Age -->
-    <div class="input-row">
-      <div class="input-header">
-        <span class="input-label" data-en="Age" data-zh="年龄">Age</span>
-        <div style="display:flex;align-items:center;">
-          <input type="number" class="input-number" id="age-num" value="57" min="18" max="95" step="1" style="color:#6366f1;" oninput="syncFromNum('age')">
-          <span class="input-unit" data-en="years" data-zh="岁">years</span>
-        </div>
-      </div>
-      <div class="slider-wrap">
-        <div class="slider-track"><div class="slider-fill" id="age-fill" style="background:linear-gradient(90deg,#6366f166,#6366f1);"></div></div>
-        <input type="range" id="age" min="18" max="95" step="1" value="57" style="--thumb-color:#6366f1;" oninput="syncFromSlider('age')">
-      </div>
-      <div class="slider-ticks"><span>18</span><span>95</span></div>
-    </div>
-
-    <!-- Hemoglobin -->
-    <div class="input-row">
-      <div class="input-header">
-        <span class="input-label" data-en="Hemoglobin" data-zh="血红蛋白">Hemoglobin</span>
-        <div style="display:flex;align-items:center;">
-          <input type="number" class="input-number" id="hb-num" value="135" min="40" max="200" step="1" style="color:#2166AC;" oninput="syncFromNum('hb')">
-          <span class="input-unit">g/L</span>
-        </div>
-      </div>
-      <div class="input-desc" data-en="Normal: 120–160 g/L (male), 110–150 g/L (female)" data-zh="正常值：男 120–160 g/L，女 110–150 g/L">Normal: 120–160 g/L (male), 110–150 g/L (female)</div>
-      <div class="slider-wrap">
-        <div class="slider-track"><div class="slider-fill" id="hb-fill" style="background:linear-gradient(90deg,#2166AC66,#2166AC);"></div></div>
-        <input type="range" id="hb" min="40" max="200" step="1" value="135" style="--thumb-color:#2166AC;" oninput="syncFromSlider('hb')">
-      </div>
-      <div class="slider-ticks"><span>40</span><span>200</span></div>
-    </div>
-
-    <!-- ALP -->
-    <div class="input-row">
-      <div class="input-header">
-        <span class="input-label" data-en="ALP" data-zh="碱性磷酸酶">ALP</span>
-        <div style="display:flex;align-items:center;">
-          <input type="number" class="input-number" id="alp-num" value="109" min="10" max="500" step="1" style="color:#0891b2;" oninput="syncFromNum('alp')">
-          <span class="input-unit">U/L</span>
-        </div>
-      </div>
-      <div class="input-desc" data-en="Alkaline phosphatase. Normal: 45–125 U/L" data-zh="碱性磷酸酶，正常值：45–125 U/L">Alkaline phosphatase. Normal: 45–125 U/L</div>
-      <div class="slider-wrap">
-        <div class="slider-track"><div class="slider-fill" id="alp-fill" style="background:linear-gradient(90deg,#0891b266,#0891b2);"></div></div>
-        <input type="range" id="alp" min="10" max="500" step="1" value="109" style="--thumb-color:#0891b2;" oninput="syncFromSlider('alp')">
-      </div>
-      <div class="slider-ticks"><span>10</span><span>500</span></div>
-    </div>
-
-    <!-- INR -->
-    <div class="input-row">
-      <div class="input-header">
-        <span class="input-label">INR</span>
-        <div style="display:flex;align-items:center;">
-          <input type="number" class="input-number" id="inr-num" value="1.04" min="0.80" max="3.00" step="0.01" style="color:#7c3aed;" oninput="syncFromNum('inr')">
-        </div>
-      </div>
-      <div class="input-desc" data-en="Normal: 0.85–1.15" data-zh="正常值：0.85–1.15">Normal: 0.85–1.15</div>
-      <div class="slider-wrap">
-        <div class="slider-track"><div class="slider-fill" id="inr-fill" style="background:linear-gradient(90deg,#7c3aed66,#7c3aed);"></div></div>
-        <input type="range" id="inr" min="0.80" max="3.00" step="0.01" value="1.04" style="--thumb-color:#7c3aed;" oninput="syncFromSlider('inr')">
-      </div>
-      <div class="slider-ticks"><span>0.80</span><span>3.00</span></div>
-    </div>
-
-    <!-- ALBI（由白蛋白+总胆红素自动计算） -->
-    <div class="input-row" style="background:#f0fdfa;border-radius:12px;padding:16px 14px;margin-bottom:24px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <span class="input-label" data-en="ALBI Score (auto-calculated)" data-zh="ALBI 评分（自动计算）">ALBI Score (auto-calculated)</span>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span id="albi-display" style="font-size:22px;font-weight:800;color:#0d9488;font-variant-numeric:tabular-nums;">-2.64</span>
-          <span id="albi-grade-badge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;background:#d1fae5;color:#059669;">Grade 1</span>
-        </div>
-      </div>
-
-      <!-- 白蛋白 -->
-      <div style="margin-bottom:14px;">
-        <div class="input-header">
-          <span style="font-size:12px;font-weight:600;color:#475569;" data-en="Albumin" data-zh="白蛋白">Albumin</span>
-          <div style="display:flex;align-items:center;">
-            <input type="number" class="input-number" id="albumin-num" value="40" min="10" max="60" step="0.1" style="color:#0d9488;width:75px;font-size:15px;" oninput="calcALBI()">
-            <span class="input-unit">g/L</span>
-          </div>
-        </div>
-        <div class="input-desc" data-en="Normal: 35–55 g/L" data-zh="正常值：35–55 g/L">Normal: 35–55 g/L</div>
+    <div class="input-group">
+      <label class="input-label" id="lblIcg">ICG-R15 (%)</label>
+      <div class="input-row">
+        <input type="number" id="icgNum" value="5" min="0" step="0.1">
         <div class="slider-wrap">
-          <div class="slider-track"><div class="slider-fill" id="albumin-fill" style="background:linear-gradient(90deg,#0d948866,#0d9488);"></div></div>
-          <input type="range" id="albumin-slider" min="10" max="60" step="0.1" value="40" style="--thumb-color:#0d9488;" oninput="syncAlbuminSlider()">
+          <input type="range" id="icgSlider" value="5" min="0" max="50" step="0.1">
         </div>
-        <div class="slider-ticks"><span>10</span><span>60</span></div>
       </div>
+      <div class="hint" id="hintIcg">正常 &lt;10%, 临界 10-20%, 异常 &gt;20%</div>
+    </div>
 
-      <!-- 总胆红素 -->
-      <div>
-        <div class="input-header">
-          <span style="font-size:12px;font-weight:600;color:#475569;" data-en="Total Bilirubin" data-zh="总胆红素">Total Bilirubin</span>
-          <div style="display:flex;align-items:center;">
-            <input type="number" class="input-number" id="tbil-num" value="15" min="1" max="200" step="0.1" style="color:#0d9488;width:75px;font-size:15px;" oninput="calcALBI()">
-            <span class="input-unit" data-en="μmol/L" data-zh="μmol/L">μmol/L</span>
-          </div>
-        </div>
-        <div class="input-desc" data-en="Normal: 3.4–20.5 μmol/L" data-zh="正常值：3.4–20.5 μmol/L">Normal: 3.4–20.5 μmol/L</div>
+    <div class="input-group">
+      <label class="input-label" id="lblAlb">白蛋白 (g/L)</label>
+      <div class="input-row">
+        <input type="number" id="albNum" value="40" min="0" step="0.1">
         <div class="slider-wrap">
-          <div class="slider-track"><div class="slider-fill" id="tbil-fill" style="background:linear-gradient(90deg,#0d948866,#0d9488);"></div></div>
-          <input type="range" id="tbil-slider" min="1" max="200" step="0.1" value="15" style="--thumb-color:#0d9488;" oninput="syncTbilSlider()">
-        </div>
-        <div class="slider-ticks"><span>1</span><span>200</span></div>
-      </div>
-
-      <!-- ALBI公式说明 -->
-      <div style="margin-top:10px;font-size:10px;color:#94a3b8;text-align:center;" data-en="ALBI = log₁₀(Bilirubin μmol/L) × 0.66 + Albumin g/L × (−0.085)" data-zh="ALBI = log₁₀(胆红素 μmol/L) × 0.66 + 白蛋白 g/L × (−0.085)">ALBI = log₁₀(Bilirubin μmol/L) × 0.66 + Albumin g/L × (−0.085)</div>
-    </div>
-
-    <!-- ECOG-PS -->
-    <div class="input-row">
-      <div class="input-header">
-        <span class="input-label">ECOG-PS</span>
-        <div style="display:flex;align-items:center;">
-          <input type="number" class="input-number" id="ecog-num" value="0" min="0" max="4" step="1" style="color:#dc2626;" oninput="syncFromNum('ecog')">
+          <input type="range" id="albSlider" value="40" min="15" max="60" step="0.1">
         </div>
       </div>
-      <div class="slider-wrap">
-        <div class="slider-track"><div class="slider-fill" id="ecog-fill" style="background:linear-gradient(90deg,#dc262666,#dc2626);"></div></div>
-        <input type="range" id="ecog" min="0" max="4" step="1" value="0" style="--thumb-color:#dc2626;" oninput="syncFromSlider('ecog')">
-      </div>
-      <div class="slider-ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
     </div>
 
-    <!-- Tumor Number -->
-    <div class="input-row">
-      <div class="input-header">
-        <span class="input-label" data-en="Tumor Number" data-zh="肿瘤数量">Tumor Number</span>
-      </div>
-      <div class="btn-group">
-        <button class="btn-opt active" id="btn-single" onclick="setTumor('single')" data-en="Single" data-zh="单发">Single</button>
-        <button class="btn-opt" id="btn-multiple" onclick="setTumor('multiple')" data-en="Multiple" data-zh="多发">Multiple</button>
+    <div class="input-group">
+      <label class="input-label" id="lblTbil">总胆红素 (μmol/L)</label>
+      <div class="input-row">
+        <input type="number" id="tbilNum" value="15" min="0" step="0.1">
+        <div class="slider-wrap">
+          <input type="range" id="tbilSlider" value="15" min="3" max="200" step="0.1">
+        </div>
       </div>
     </div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblAlbi">ALBI 评分 (自动)</label>
+      <div class="auto-box grade-none" id="albiBox">
+        <span id="albiValue">-2.279</span>
+        <span class="auto-grade" id="albiGrade">Grade 2</span>
+      </div>
+    </div>
+
+    <div class="section-label" id="secFibrosis">肝纤维化指标</div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblAst">AST (U/L)</label>
+      <div class="input-row">
+        <input type="number" id="astNum" value="30" min="0" step="1">
+        <div class="slider-wrap">
+          <input type="range" id="astSlider" value="30" min="5" max="500" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblAlt">ALT (U/L)</label>
+      <div class="input-row">
+        <input type="number" id="altNum" value="30" min="0" step="1">
+        <div class="slider-wrap">
+          <input type="range" id="altSlider" value="30" min="5" max="500" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblPlt">血小板 PLT (×10⁹/L)</label>
+      <div class="input-row">
+        <input type="number" id="pltNum" value="180" min="0" step="1">
+        <div class="slider-wrap">
+          <input type="range" id="pltSlider" value="180" min="20" max="500" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblFib4">FIB-4 (自动)</label>
+      <div class="auto-box grade-none" id="fib4Box">
+        <span id="fib4Value">1.60</span>
+        <span class="auto-grade" id="fib4Grade">无明显纤维化</span>
+      </div>
+      <div class="hint" id="hintFib4" style="margin-left:0;">&lt;1.45 无明显纤维化, 1.45-3.25 中等, &gt;3.25 显著纤维化</div>
+    </div>
+
+    <div class="section-label" id="secBasic">基本信息与手术方案</div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblAge">年龄 (岁)</label>
+      <div class="input-row">
+        <input type="number" id="ageNum" value="55" min="18" max="90" step="1">
+        <div class="slider-wrap">
+          <input type="range" id="ageSlider" value="55" min="18" max="90" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblBmi">BMI (kg/m²)</label>
+      <div class="input-row">
+        <input type="number" id="bmiNum" value="23" min="0" step="0.1">
+        <div class="slider-wrap">
+          <input type="range" id="bmiSlider" value="23" min="14" max="45" step="0.1">
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblBclc">BCLC 分期</label>
+      <select id="bclcSel">
+        <option value="0/A">0 / A 期</option>
+        <option value="B">B 期</option>
+        <option value="C/D">C / D 期</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label" id="lblSurg">拟行术式</label>
+      <select id="surgSel">
+        <option value="Minor">Minor - 楔形/局部/单段切除</option>
+        <option value="Sectionectomy">Sectionectomy - 段/区切除</option>
+        <option value="Major-Left/Central">Major-Left/Central - 左半肝/中肝</option>
+        <option value="Major-Right">Major-Right - 右半肝 (最高危)</option>
+      </select>
+    </div>
+
+    <button class="btn-calc" id="btnCalc" onclick="calculate()">计算风险</button>
+    <div class="disclaimer" id="disclaimer">本工具仅供临床参考, 不替代医生决策</div>
   </div>
 
-  <!-- Result Card -->
-  <div class="card result-card" id="result-card">
-    <div class="card-label" id="result-label" style="color:#22c55e;" data-en="PREDICTION RESULT" data-zh="预测结果">PREDICTION RESULT</div>
-
-    <div class="gauge-wrap">
-      <svg viewBox="0 0 200 120" width="240" style="overflow:visible;">
-        <defs>
-          <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#22c55e"/>
-            <stop offset="30%" stop-color="#a3e635"/>
-            <stop offset="50%" stop-color="#facc15"/>
-            <stop offset="70%" stop-color="#f97316"/>
-            <stop offset="100%" stop-color="#ef4444"/>
-          </linearGradient>
-          <filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.2"/></filter>
-        </defs>
-        <path d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke="#f1f5f9" stroke-width="16" stroke-linecap="round"/>
-        <path d="M 20 105 A 80 80 0 0 1 180 105" fill="none" stroke="url(#gg)" stroke-width="16" stroke-linecap="round"/>
-        <line id="needle" x1="100" y1="105" x2="38" y2="105" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" filter="url(#shadow)"/>
-        <circle cx="100" cy="105" r="6" fill="#1e293b"/>
-        <circle cx="100" cy="105" r="2.5" fill="#fff"/>
-        <text x="10" y="118" font-size="9" fill="#94a3b8" text-anchor="middle">0%</text>
-        <text x="100" y="14" font-size="9" fill="#94a3b8" text-anchor="middle">50%</text>
-        <text x="190" y="118" font-size="9" fill="#94a3b8" text-anchor="middle">100%</text>
-      </svg>
-      <div class="gauge-prob" id="prob-text">28.5%</div>
-      <div class="risk-badge" id="risk-badge"><span id="risk-icon">✓</span> <span id="risk-text">Low Risk</span></div>
+  <!-- Result panel -->
+  <div id="resultPanel">
+    <div class="panel">
+      <div class="empty-state">
+        <span class="empty-state-icon">📋</span>
+        <div id="promptEmpty">请在左侧输入患者信息, 然后点击"计算风险"</div>
+      </div>
     </div>
-
-    <div class="advice-box" id="advice-box">
-      <div class="advice-title" id="advice-title" data-en="Clinical Recommendation" data-zh="临床建议">Clinical Recommendation</div>
-      <div class="advice-text" id="advice-text"></div>
-      <table class="prep-table" id="prep-table"></table>
-    </div>
-
-    <div class="contrib-section">
-      <div class="contrib-title" id="contrib-label" data-en="Variable contributions to risk" data-zh="各变量对风险的贡献">Variable contributions to risk</div>
-      <div id="contrib-bars"></div>
-    </div>
-  </div>
-
-  <div class="footer">
-    <div>7-variable logistic regression · AUC 0.90 · C-index 0.89 · Validation AUC 0.87</div>
-    <div id="disclaimer" data-en="For clinical decision support only. Not a substitute for clinical judgment." data-zh="仅供临床决策参考，不能替代医生判断。">For clinical decision support only. Not a substitute for clinical judgment.</div>
-    <div class="ver">HCC Perioperative Transfusion Risk Prediction Tool v1.0</div>
   </div>
 </div>
 
 <script>
-const B0 = -8.914243;
-const B = { age:-0.05958321, hb:0.014564080, alp:-0.004087084, inr:3.236797035, ts:1.671006216, ecog:2.982574109, albi:-1.746737337 };
+const MODEL = {
+  intercept: 0.300628456,
+  beta_icg1: 0.006652289, beta_icg2: 0.031729303,
+  beta_albi: 0.435198853, beta_fib4: 0.481806512,
+  beta_bmi:  -0.070678259,
+  beta_surg_Sect:  -0.019566102,
+  beta_surg_MajorL: 0.097506088,
+  beta_surg_MajorR: 0.885314457,
+  beta_bclc_B:     0.604808058,
+  beta_bclc_CD:    0.669510439,
+  knots: [0.42, 4.30, 11.40],
 
-let tumorSingle = 1, lang = 'en';
+  // ★ 四层切点 (基于本院592例数据的四分位数标定)
+  cutLow: 0.077,      // Q1: ≤7.7% 低风险 (n=148, 实际率8.1%)
+  cutMod: 0.113,      // Q2: 7.7-11.3% 中风险 (n=148, 实际率7.4%)
+  cutHigh: 0.175,     // Q3: 11.3-17.5% 高风险 (n=148, 实际率13.5%)
+                      // >17.5% 极高风险 (n=148, 实际率29.7%)
+  vcov: [
+    [ 1.513874,-0.016802, 0.013981, 0.255805,-0.064806,-0.028889,-0.050389,-0.035567,-0.031450,-0.045062,-0.044192],
+    [-0.016802, 0.006915,-0.007356,-0.000296,-0.002752,-0.000210, 0.002501, 0.002532, 0.000308,-0.002269, 0.001081],
+    [ 0.013981,-0.007356, 0.008301,-0.001428, 0.001775, 0.000156,-0.002455,-0.003037, 0.000344, 0.002380,-0.000985],
+    [ 0.255805,-0.000296,-0.001428, 0.092758,-0.010644, 0.000556,-0.005621, 0.002773,-0.003657,-0.010749,-0.005736],
+    [-0.064806,-0.002752, 0.001775,-0.010644, 0.039021, 0.000802,-0.006184,-0.000958, 0.000123,-0.002988,-0.007315],
+    [-0.028889,-0.000210, 0.000156, 0.000556, 0.000802, 0.001333, 0.000174, 0.000483,-0.000177, 0.000327, 0.000612],
+    [-0.050389, 0.002501,-0.002455,-0.005621,-0.006184, 0.000174, 0.135726, 0.027243, 0.025933, 0.001056, 0.005712],
+    [-0.035567, 0.002532,-0.003037, 0.002773,-0.000958, 0.000483, 0.027243, 0.168369, 0.027518,-0.004105,-0.005962],
+    [-0.031450, 0.000308, 0.000344,-0.003657, 0.000123,-0.000177, 0.025933, 0.027518, 0.112848,-0.013449,-0.030052],
+    [-0.045062,-0.002269, 0.002380,-0.010749,-0.002988, 0.000327, 0.001056,-0.004105,-0.013449, 0.139061, 0.025824],
+    [-0.044192, 0.001081,-0.000985,-0.005736,-0.007315, 0.000612, 0.005712,-0.005962,-0.030052, 0.025824, 0.147210]
+  ]
+};
 
-const TEXTS = {
-  en: {
-    low: { level:'Low Risk', icon:'✓', advice:'Routine blood preparation recommended.',
-      prep:[['Crossmatch','2U pRBC'],['Cell saver','Not required'],['ICU alert','No'],['Special note','Standard protocol']] },
-    mod: { level:'Moderate Risk', icon:'⚠', advice:'Enhanced blood preparation recommended.',
-      prep:[['Crossmatch','4U pRBC'],['Cell saver','Standby'],['ICU alert','Notify'],['Special note','Confirm blood bank availability']] },
-    high:{ level:'High Risk', icon:'✕', advice:'Maximum blood preparation. Consider multidisciplinary discussion.',
-      prep:[['Crossmatch','≥6U pRBC + FFP'],['Cell saver','Required'],['ICU alert','Reserve bed'],['Special note','Consider staged approach']] }
+function rcsExpand(x, knots) {
+  const k = knots, n = k.length;
+  const kn = k[n-1], k1 = k[0];
+  const scale = Math.pow(kn - k1, 2);
+  const pc = (u) => u > 0 ? Math.pow(u, 3) : 0;
+  const t1 = x;
+  const t2 = (pc(x - k[0])
+              - pc(x - k[n-2]) * (kn - k[0]) / (kn - k[n-2])
+              + pc(x - k[n-1]) * (kn - k[0]) / (kn - k[n-2])
+              ) / scale;
+  return [t1, t2];
+}
+
+function buildX(icg, albi, log_fib4, bmi, surg, bclc) {
+  const [t1, t2] = rcsExpand(icg, MODEL.knots);
+  const x = [1, t1, t2, albi, log_fib4, bmi];
+  x.push(surg === 'Sectionectomy' ? 1 : 0);
+  x.push(surg === 'Major-Left/Central' ? 1 : 0);
+  x.push(surg === 'Major-Right' ? 1 : 0);
+  x.push(bclc === 'B' ? 1 : 0);
+  x.push(bclc === 'C/D' ? 1 : 0);
+  return x;
+}
+
+const BETA = [
+  MODEL.intercept, MODEL.beta_icg1, MODEL.beta_icg2,
+  MODEL.beta_albi, MODEL.beta_fib4, MODEL.beta_bmi,
+  MODEL.beta_surg_Sect, MODEL.beta_surg_MajorL, MODEL.beta_surg_MajorR,
+  MODEL.beta_bclc_B, MODEL.beta_bclc_CD
+];
+
+function predict(icg, albi, log_fib4, bmi, surg, bclc) {
+  const x = buildX(icg, albi, log_fib4, bmi, surg, bclc);
+  let lp = 0;
+  for (let i = 0; i < 11; i++) lp += x[i] * BETA[i];
+  let seSq = 0;
+  for (let i = 0; i < 11; i++) {
+    for (let j = 0; j < 11; j++) {
+      seSq += x[i] * MODEL.vcov[i][j] * x[j];
+    }
+  }
+  const se = Math.sqrt(Math.max(seSq, 0));
+  const plogis = v => 1/(1+Math.exp(-v));
+  return { prob: plogis(lp), ci_lo: plogis(lp-1.96*se), ci_hi: plogis(lp+1.96*se) };
+}
+
+// ★ 四层分级
+function tierOf(prob) {
+  if (prob <= MODEL.cutLow) return 'Low';
+  if (prob <= MODEL.cutMod) return 'Moderate';
+  if (prob <= MODEL.cutHigh) return 'High';
+  return 'Extreme';
+}
+
+const I18N = {
+  cn: {
+    title: "HCC 术前 PHLF 风险评估与手术决策辅助系统",
+    langBtn: "EN",
+    patientInfo: "患者信息",
+    secReserve: "肝功能储备指标",
+    secFibrosis: "肝纤维化指标",
+    secBasic: "基本信息与手术方案",
+    lblIcg: "ICG-R15 (%)", hintIcg: "正常 <10%, 临界 10-20%, 异常 >20%",
+    lblAlb: "白蛋白 (g/L)", lblTbil: "总胆红素 (μmol/L)",
+    lblAlbi: "ALBI 评分 (自动)",
+    lblAst: "AST (U/L)", lblAlt: "ALT (U/L)", lblPlt: "血小板 PLT (×10⁹/L)",
+    lblFib4: "FIB-4 (自动)",
+    hintFib4: "<1.45 无明显纤维化, 1.45-3.25 中等, >3.25 显著纤维化",
+    lblAge: "年龄 (岁)", lblBmi: "BMI (kg/m²)",
+    lblBclc: "BCLC 分期", lblSurg: "拟行术式",
+    btnCalc: "计算风险",
+    disclaimer: "本工具仅供临床参考, 不替代医生决策",
+    promptEmpty: '请在左侧输入患者信息, 然后点击"计算风险"',
+    resultLabel: "PHLF B/C 概率",
+    tierLow: "低风险", tierMod: "中风险",
+    tierHigh: "高风险", tierExtreme: "极高风险",
+    ciLabel: "95% CI:",
+    defBtn: "分级说明",
+    tierDefTitle: "风险分级定义 (基于本院 592 例四分位数分层, 各层 n≈148)",
+    tierDefLow:   ["≤ 7.7%",       "实际 PHLF 率 8.1% — 低于总体基线一半"],
+    tierDefMod:   ["7.7% - 11.3%", "实际 PHLF 率 7.4% — 接近总体基线率"],
+    tierDefHigh:  ["11.3% - 17.5%","实际 PHLF 率 13.5% — 略高于基线"],
+    tierDefExtreme:["> 17.5%",     "实际 PHLF 率 29.7% — 基线率的 2 倍以上"],
+    adviceTitle: "建议",
+    recordTitle: "术前讨论记录单建议内容",
+    compareTitle: "★ 不同术式风险对比 (其他条件不变)",
+    thSurg: "术式", thProb: "PHLF 概率", thTier: "风险层",
+    surgLabels: {
+      "Minor": "Minor - 楔形/单段",
+      "Sectionectomy": "Sectionectomy - 段/区切除",
+      "Major-Left/Central": "Major-Left/Central - 左半肝/中肝",
+      "Major-Right": "Major-Right - 右半肝"
+    },
+    grade: "级", gradePrefix: "",
+    fib4Low: "无明显纤维化", fib4Mid: "中等纤维化", fib4High: "显著纤维化",
+    invalidInput: "请输入有效的化验值",
+    adviceLow: { title: "常规手术计划", items: [
+      "按常规术前准备流程",
+      "标准围术期管理方案",
+      "常规术后监测"
+    ]},
+    adviceMod: { title: "术前优化 + 标准手术", items: [
+      "术前加强营养支持 (白蛋白目标 ≥35 g/L)",
+      "优化肝功能 (保肝治疗 1-2 周)",
+      "标准手术计划, 术后加强肝功能监测"
+    ]},
+    adviceHigh: { title: "MDT 慎重讨论 + 审慎手术规划", items: [
+      "MDT 讨论切除范围: 考虑缩小切除面积",
+      "术前充分优化 (营养 + 保肝 + 抗病毒)",
+      "术后 ICU 备床, 加强肝功能监测",
+      "与患者及家属充分沟通手术风险"
+    ]},
+    adviceExtreme: { title: "强烈建议考虑替代方案", items: [
+      "强烈建议 MDT 充分讨论手术必要性",
+      "优先考虑先行 TACE 降期治疗",
+      "考虑 PVE / ALPPS 增大预留肝体积",
+      "若必须手术: 严格缩小切除范围, 术后必须 ICU 监护",
+      "充分知情同意, 制定 PHLF 应急预案"
+    ]},
+    recordTpl: p => `术前 PHLF 风险评估: ${p.prob}% (${p.tier})
+评估依据: ICG-R15=${p.icg}%, ALBI=${p.albi}, FIB-4=${p.fib4}, 年龄=${p.age}岁, BMI=${p.bmi}
+BCLC 分期: ${p.bclc}, 拟行术式: ${p.surgLabel}
+风险等级: ${p.tier}
+处理建议: ${p.adviceTitle}`
   },
-  zh: {
-    low: { level:'低风险', icon:'✓', advice:'常规术前备血即可。',
-      prep:[['交叉配血','2U 红细胞悬液'],['自体血回输','无需准备'],['ICU通知','否'],['特别说明','按常规流程准备']] },
-    mod: { level:'中等风险', icon:'⚠', advice:'建议加强备血，提前通知血库。',
-      prep:[['交叉配血','4U 红细胞悬液'],['自体血回输','待命'],['ICU通知','提前告知'],['特别说明','确认血库库存充足']] },
-    high:{ level:'高风险', icon:'✕', advice:'需最大量备血，建议MDT讨论手术方案。',
-      prep:[['交叉配血','≥6U 红细胞 + 新鲜冰冻血浆'],['自体血回输','必须准备'],['ICU通知','预留床位'],['特别说明','考虑分期手术或介入降期']] }
+  en: {
+    title: "HCC Pre-op PHLF Risk & Surgical Decision Support",
+    langBtn: "中",
+    patientInfo: "Patient Information",
+    secReserve: "Liver Function Reserve",
+    secFibrosis: "Liver Fibrosis Indicators",
+    secBasic: "Demographics & Surgical Plan",
+    lblIcg: "ICG-R15 (%)", hintIcg: "Normal <10%, borderline 10-20%, abnormal >20%",
+    lblAlb: "Albumin (g/L)", lblTbil: "Total bilirubin (μmol/L)",
+    lblAlbi: "ALBI score (auto)",
+    lblAst: "AST (U/L)", lblAlt: "ALT (U/L)", lblPlt: "Platelet (×10⁹/L)",
+    lblFib4: "FIB-4 (auto)",
+    hintFib4: "<1.45 no significant fibrosis, 1.45-3.25 moderate, >3.25 significant",
+    lblAge: "Age (years)", lblBmi: "BMI (kg/m²)",
+    lblBclc: "BCLC Stage", lblSurg: "Planned Procedure",
+    btnCalc: "Calculate Risk",
+    disclaimer: "For clinical reference only. Does not replace physician judgment.",
+    promptEmpty: 'Enter patient information on the left, then click "Calculate Risk"',
+    resultLabel: "PHLF Grade B/C probability",
+    tierLow: "Low Risk", tierMod: "Moderate Risk",
+    tierHigh: "High Risk", tierExtreme: "Extreme Risk",
+    ciLabel: "95% CI:",
+    defBtn: "Definition",
+    tierDefTitle: "Risk tier definitions (quartile-based, n≈148 per tier, N=592)",
+    tierDefLow:    ["≤ 7.7%",       "Actual PHLF rate 8.1% — below half of baseline"],
+    tierDefMod:    ["7.7% - 11.3%", "Actual PHLF rate 7.4% — near baseline (13.6%)"],
+    tierDefHigh:   ["11.3% - 17.5%","Actual PHLF rate 13.5% — slightly above baseline"],
+    tierDefExtreme:["> 17.5%",      "Actual PHLF rate 29.7% — 2+ times baseline"],
+    adviceTitle: "Recommendations",
+    recordTitle: "Pre-op Discussion Note Template",
+    compareTitle: "★ Risk Comparison Across Procedures (other factors held constant)",
+    thSurg: "Procedure", thProb: "PHLF Probability", thTier: "Risk Tier",
+    surgLabels: {
+      "Minor": "Minor - Wedge/Segmentectomy",
+      "Sectionectomy": "Sectionectomy",
+      "Major-Left/Central": "Major-Left/Central hepatectomy",
+      "Major-Right": "Major-Right hepatectomy"
+    },
+    grade: "", gradePrefix: "Grade ",
+    fib4Low: "No significant fibrosis", fib4Mid: "Moderate fibrosis", fib4High: "Significant fibrosis",
+    invalidInput: "Please enter valid lab values",
+    adviceLow: { title: "Standard surgical plan", items: [
+      "Routine pre-op preparation",
+      "Standard perioperative management",
+      "Routine post-op monitoring"
+    ]},
+    adviceMod: { title: "Pre-op optimization + standard surgery", items: [
+      "Enhance nutritional support (albumin target ≥35 g/L)",
+      "Optimize liver function (hepatoprotective therapy 1-2 weeks)",
+      "Standard surgical plan with enhanced post-op monitoring"
+    ]},
+    adviceHigh: { title: "MDT careful discussion + prudent planning", items: [
+      "MDT to discuss resection extent: consider reducing volume",
+      "Comprehensive pre-op optimization (nutrition + hepatoprotection + antiviral)",
+      "Reserve ICU bed, enhanced post-op monitoring",
+      "Thorough risk discussion with patient and family"
+    ]},
+    adviceExtreme: { title: "Strongly consider alternative therapies", items: [
+      "Strongly recommend MDT to reconsider surgical necessity",
+      "Prioritize TACE for downstaging",
+      "Consider PVE / ALPPS to augment future liver remnant",
+      "If surgery essential: strictly minimize resection, mandatory ICU",
+      "Comprehensive informed consent, PHLF contingency plan"
+    ]},
+    recordTpl: p => `Pre-op PHLF risk: ${p.prob}% (${p.tier})
+Basis: ICG-R15=${p.icg}%, ALBI=${p.albi}, FIB-4=${p.fib4}, Age=${p.age} yrs, BMI=${p.bmi}
+BCLC: ${p.bclc}, Procedure: ${p.surgLabel}
+Risk tier: ${p.tier}
+Recommendation: ${p.adviceTitle}`
   }
 };
 
-function setLang(l) {
-  lang = l;
-  document.getElementById('lang-en').className = l==='en' ? 'active' : '';
-  document.getElementById('lang-zh').className = l==='zh' ? 'active' : '';
-  document.querySelectorAll('[data-'+l+']').forEach(el => { el.textContent = el.getAttribute('data-'+l); });
-  calc();
+let currentLang = 'cn';
+let hasCalculated = false;
+let lastResult = null;
+let showTierDef = false;
+
+function L() { return I18N[currentLang]; }
+
+function toggleLang() {
+  currentLang = (currentLang === 'cn') ? 'en' : 'cn';
+  applyLang();
 }
 
-function setTumor(v) {
-  tumorSingle = v==='single' ? 1 : 0;
-  document.getElementById('btn-single').className = 'btn-opt' + (v==='single' ? ' active' : '');
-  document.getElementById('btn-multiple').className = 'btn-opt' + (v==='multiple' ? ' active' : '');
-  calc();
+function toggleTierDef() {
+  showTierDef = !showTierDef;
+  renderResult();
 }
 
-function syncFromSlider(id) {
-  const v = document.getElementById(id).value;
-  document.getElementById(id+'-num').value = v;
-  calc();
-}
+function applyLang() {
+  const t = L();
+  document.documentElement.lang = (currentLang === 'cn') ? 'zh' : 'en';
+  document.getElementById('title').textContent = t.title;
+  document.getElementById('langBtn').textContent = t.langBtn;
+  document.getElementById('patientInfo').textContent = t.patientInfo;
+  document.getElementById('secReserve').textContent = t.secReserve;
+  document.getElementById('secFibrosis').textContent = t.secFibrosis;
+  document.getElementById('secBasic').textContent = t.secBasic;
+  document.getElementById('lblIcg').textContent = t.lblIcg;
+  document.getElementById('hintIcg').innerHTML = t.hintIcg;
+  document.getElementById('lblAlb').textContent = t.lblAlb;
+  document.getElementById('lblTbil').textContent = t.lblTbil;
+  document.getElementById('lblAlbi').textContent = t.lblAlbi;
+  document.getElementById('lblAst').textContent = t.lblAst;
+  document.getElementById('lblAlt').textContent = t.lblAlt;
+  document.getElementById('lblPlt').textContent = t.lblPlt;
+  document.getElementById('lblFib4').textContent = t.lblFib4;
+  document.getElementById('hintFib4').innerHTML = t.hintFib4;
+  document.getElementById('lblAge').textContent = t.lblAge;
+  document.getElementById('lblBmi').textContent = t.lblBmi;
+  document.getElementById('lblBclc').textContent = t.lblBclc;
+  document.getElementById('lblSurg').textContent = t.lblSurg;
+  document.getElementById('btnCalc').textContent = t.btnCalc;
+  document.getElementById('disclaimer').textContent = t.disclaimer;
 
-function syncFromNum(id) {
-  const el = document.getElementById(id+'-num');
-  let v = parseFloat(el.value);
-  const slider = document.getElementById(id);
-  const mn = parseFloat(slider.min), mx = parseFloat(slider.max);
-  if (isNaN(v)) return;
-  v = Math.max(mn, Math.min(mx, v));
-  slider.value = v;
-  calc();
-}
+  const surgSel = document.getElementById('surgSel');
+  const currentSurg = surgSel.value;
+  surgSel.innerHTML = Object.entries(t.surgLabels).map(([k,v]) =>
+    `<option value="${k}"${k===currentSurg?' selected':''}>${v}</option>`).join('');
 
-// ---- ALBI自动计算 ----
-let currentALBI = -2.64;
-
-function calcALBI() {
-  const alb = parseFloat(document.getElementById('albumin-num').value);
-  const tbil = parseFloat(document.getElementById('tbil-num').value);
-  if (isNaN(alb) || isNaN(tbil) || tbil <= 0) return;
-
-  // ALBI = log10(bilirubin μmol/L) × 0.66 + albumin g/L × (-0.085)
-  currentALBI = Math.log10(tbil) * 0.66 + alb * (-0.085);
-  currentALBI = Math.round(currentALBI * 100) / 100;
-
-  document.getElementById('albi-display').textContent = currentALBI.toFixed(2);
-
-  // ALBI分级标签
-  const badge = document.getElementById('albi-grade-badge');
-  if (currentALBI <= -2.60) {
-    badge.textContent = 'Grade 1';
-    badge.style.background = '#d1fae5'; badge.style.color = '#059669';
-  } else if (currentALBI <= -1.39) {
-    badge.textContent = 'Grade 2';
-    badge.style.background = '#fef3c7'; badge.style.color = '#d97706';
+  if (!hasCalculated) {
+    document.getElementById('promptEmpty').textContent = t.promptEmpty;
   } else {
-    badge.textContent = 'Grade 3';
-    badge.style.background = '#fee2e2'; badge.style.color = '#dc2626';
+    renderResult();
   }
-
-  // 更新滑块填充
-  fillBar('albumin', alb, 10, 60);
-  fillBar('tbil', tbil, 1, 200);
-
-  calc();
+  updateAlbi();
+  updateFib4();
 }
 
-function syncAlbuminSlider() {
-  document.getElementById('albumin-num').value = document.getElementById('albumin-slider').value;
-  calcALBI();
-}
-
-function syncTbilSlider() {
-  document.getElementById('tbil-num').value = document.getElementById('tbil-slider').value;
-  calcALBI();
-}
-
-function fillBar(id, val, min, max) {
-  document.getElementById(id+'-fill').style.width = ((val-min)/(max-min)*100)+'%';
-}
-
-function calc() {
-  const age = +document.getElementById('age').value;
-  const hb = +document.getElementById('hb').value;
-  const alp = +document.getElementById('alp').value;
-  const inr = +document.getElementById('inr').value;
-  const albi = currentALBI;
-  const ecog = +document.getElementById('ecog').value;
-
-  fillBar('age',age,18,95); fillBar('hb',hb,40,200); fillBar('alp',alp,10,500);
-  fillBar('inr',inr,0.80,3.00); fillBar('ecog',ecog,0,4);
-
-  const logit = B0 + B.age*age + B.hb*hb + B.alp*alp + B.inr*inr + B.ts*tumorSingle + B.ecog*ecog + B.albi*albi;
-  const prob = 1/(1+Math.exp(-logit));
-  const pct = prob*100;
-
-  let rk; const t = TEXTS[lang];
-  if (prob<0.3) rk = {color:'#22c55e',bg:'#f0fdf4',border:'#bbf7d0',...t.low};
-  else if (prob<0.6) rk = {color:'#f59e0b',bg:'#fffbeb',border:'#fde68a',...t.mod};
-  else rk = {color:'#ef4444',bg:'#fef2f2',border:'#fecaca',...t.high};
-
-  // Needle — 0%=left(180°), 50%=top(90°), 100%=right(0°)
-  const ang = (1 - prob) * 180;
-  const rad = ang * Math.PI / 180;
-  document.getElementById('needle').setAttribute('x2', 100 + 62 * Math.cos(rad));
-  document.getElementById('needle').setAttribute('y2', 105 - 62 * Math.sin(rad));
-
-  document.getElementById('prob-text').textContent = pct.toFixed(1)+'%';
-  document.getElementById('prob-text').style.color = rk.color;
-
-  const badge = document.getElementById('risk-badge');
-  badge.style.background = rk.bg; badge.style.border = '1.5px solid '+rk.border; badge.style.color = rk.color;
-  document.getElementById('risk-icon').textContent = rk.icon;
-  document.getElementById('risk-text').textContent = rk.level;
-
-  document.getElementById('result-card').style.borderTopColor = rk.color;
-  document.getElementById('result-label').style.color = rk.color;
-
-  const ab = document.getElementById('advice-box');
-  ab.style.background = rk.bg; ab.style.border = '1px solid '+rk.border;
-  document.getElementById('advice-title').style.color = rk.color;
-  document.getElementById('advice-text').textContent = rk.advice;
-
-  let ptHtml = '';
-  rk.prep.forEach(r => { ptHtml += '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'; });
-  document.getElementById('prep-table').innerHTML = ptHtml;
-
-  // Contributions
-  const names = lang==='zh'
-    ? ['年龄','血红蛋白','碱性磷酸酶','INR','肿瘤数量','ECOG-PS','ALBI']
-    : ['Age','Hb','ALP','INR','Tumor','ECOG','ALBI'];
-  const contribs = [
-    {name:names[0],val:B.age*age},{name:names[1],val:B.hb*hb},{name:names[2],val:B.alp*alp},
-    {name:names[3],val:B.inr*inr},{name:names[4],val:B.ts*tumorSingle},
-    {name:names[5],val:B.ecog*ecog},{name:names[6],val:B.albi*albi}
-  ].sort((a,b)=>Math.abs(b.val)-Math.abs(a.val));
-
-  const mx = Math.max(...contribs.map(c=>Math.abs(c.val)),0.01);
-  let ch = '';
-  contribs.forEach(c => {
-    const pw = (Math.abs(c.val)/mx)*50;
-    const pos = c.val>=0;
-    const bc = pos?'#ef4444':'#2166AC';
-    const lf = pos?'50%':(50-pw)+'%';
-    ch += '<div class="contrib-row"><div class="contrib-name">'+c.name+'</div>'+
-      '<div class="contrib-bar-wrap"><div class="contrib-bar" style="width:'+pw+'%;left:'+lf+';background:'+bc+';opacity:0.65;"></div>'+
-      '<div class="contrib-midline"></div></div>'+
-      '<div class="contrib-val" style="color:'+bc+';">'+(pos?'+':'')+c.val.toFixed(2)+'</div></div>';
+function bindPair(numId, sliderId, callback) {
+  const num = document.getElementById(numId);
+  const slider = document.getElementById(sliderId);
+  const updateBg = () => {
+    const pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+    slider.style.background = `linear-gradient(to right, var(--primary-3) 0%, var(--primary-3) ${pct}%, #e1e8ed ${pct}%, #e1e8ed 100%)`;
+  };
+  num.addEventListener('input', () => {
+    if (num.value === '' || isNaN(num.value)) return;
+    const v = parseFloat(num.value);
+    // 如果输入值超出滑条范围, 自动扩展滑条上限 (保持step一致)
+    if (v > parseFloat(slider.max)) {
+      slider.max = Math.ceil(v * 1.2);
+    }
+    if (v < parseFloat(slider.min)) {
+      slider.min = Math.floor(v * 0.8);
+    }
+    slider.value = v;
+    updateBg();
+    if (callback) callback();
   });
-  document.getElementById('contrib-bars').innerHTML = ch;
+  slider.addEventListener('input', () => {
+    num.value = slider.value;
+    updateBg();
+    if (callback) callback();
+  });
+  updateBg();
 }
 
-calc();
+// ALBI 自动 + 彩色分级
+function computeAlbi() {
+  const alb = parseFloat(document.getElementById('albNum').value);
+  const tbil = parseFloat(document.getElementById('tbilNum').value);
+  if (isNaN(alb) || isNaN(tbil) || alb <= 0 || tbil <= 0) return null;
+  return Math.log10(tbil) * 0.66 + alb * (-0.085);
+}
+function updateAlbi() {
+  const v = computeAlbi();
+  const box = document.getElementById('albiBox');
+  const val = document.getElementById('albiValue');
+  const gr = document.getElementById('albiGrade');
+  box.classList.remove('grade-low','grade-mid','grade-high','grade-none');
+  if (v === null) {
+    val.textContent = '—'; gr.textContent = '';
+    box.classList.add('grade-none');
+    return;
+  }
+  val.textContent = v.toFixed(3);
+  const g = v <= -2.60 ? 1 : v <= -1.39 ? 2 : 3;
+  gr.textContent = L().gradePrefix + g + L().grade;
+  box.classList.add(g === 1 ? 'grade-low' : g === 2 ? 'grade-mid' : 'grade-high');
+}
+
+// FIB-4 自动 + 彩色分级
+function computeFib4() {
+  const age = parseFloat(document.getElementById('ageNum').value);
+  const ast = parseFloat(document.getElementById('astNum').value);
+  const alt = parseFloat(document.getElementById('altNum').value);
+  const plt = parseFloat(document.getElementById('pltNum').value);
+  if (isNaN(age) || isNaN(ast) || isNaN(alt) || isNaN(plt) ||
+      alt <= 0 || plt <= 0) return null;
+  return age * ast / (plt * Math.sqrt(alt));
+}
+function updateFib4() {
+  const v = computeFib4();
+  const box = document.getElementById('fib4Box');
+  const val = document.getElementById('fib4Value');
+  const gr = document.getElementById('fib4Grade');
+  box.classList.remove('grade-low','grade-mid','grade-high','grade-none');
+  if (v === null || !isFinite(v)) {
+    val.textContent = '—'; gr.textContent = '';
+    box.classList.add('grade-none');
+    return;
+  }
+  val.textContent = v.toFixed(2);
+  const t = L();
+  if (v < 1.45)      { gr.textContent = t.fib4Low;  box.classList.add('grade-low'); }
+  else if (v <= 3.25){ gr.textContent = t.fib4Mid;  box.classList.add('grade-mid'); }
+  else               { gr.textContent = t.fib4High; box.classList.add('grade-high'); }
+}
+
+function calculate() {
+  const albi = computeAlbi();
+  const fib4 = computeFib4();
+  if (albi === null || fib4 === null || fib4 <= 0) {
+    document.getElementById('resultPanel').innerHTML =
+      `<div class="panel"><div class="empty-state">${L().invalidInput}</div></div>`;
+    return;
+  }
+  const icg = parseFloat(document.getElementById('icgNum').value);
+  const age = parseFloat(document.getElementById('ageNum').value);
+  const bmi = parseFloat(document.getElementById('bmiNum').value);
+  const alb = parseFloat(document.getElementById('albNum').value);
+  const tbil = parseFloat(document.getElementById('tbilNum').value);
+  const bclc = document.getElementById('bclcSel').value;
+  const surg = document.getElementById('surgSel').value;
+
+  const log_fib4 = Math.log(fib4);
+  const r = predict(icg, albi, log_fib4, bmi, surg, bclc);
+  const tier = tierOf(r.prob);
+
+  const surgOptions = ['Minor','Sectionectomy','Major-Left/Central','Major-Right'];
+  const compare = surgOptions.map(s => {
+    const p = predict(icg, albi, log_fib4, bmi, s, bclc);
+    return { surg: s, prob: p.prob, tier: tierOf(p.prob), current: s === surg };
+  });
+
+  lastResult = { r, tier, icg, alb, tbil, albi, fib4, age, bmi,
+                 bclc, surg, compare };
+  hasCalculated = true;
+  showTierDef = false;  // 每次新计算重置说明面板
+  renderResult();
+}
+
+function tierClassOf(t) {
+  return t === 'Low' ? 'risk-low' :
+         t === 'Moderate' ? 'risk-mod' :
+         t === 'High' ? 'risk-high' : 'risk-extreme';
+}
+function tierBadgeClassOf(t) {
+  return t === 'Low' ? 'low' :
+         t === 'Moderate' ? 'mod' :
+         t === 'High' ? 'high' : 'extreme';
+}
+function tierLabelOf(t) {
+  const l = L();
+  return t === 'Low' ? l.tierLow :
+         t === 'Moderate' ? l.tierMod :
+         t === 'High' ? l.tierHigh : l.tierExtreme;
+}
+function adviceOf(t) {
+  const l = L();
+  return t === 'Low' ? l.adviceLow :
+         t === 'Moderate' ? l.adviceMod :
+         t === 'High' ? l.adviceHigh : l.adviceExtreme;
+}
+
+function renderResult() {
+  if (!lastResult) return;
+  const t = L();
+  const { r, tier, icg, albi, fib4, age, bmi, bclc, surg, compare } = lastResult;
+  const probPct = (r.prob * 100).toFixed(1);
+  const ciLo = (r.ci_lo * 100).toFixed(1);
+  const ciHi = (r.ci_hi * 100).toFixed(1);
+  const tierLabel = tierLabelOf(tier);
+  const advice = adviceOf(tier);
+
+  const currentProb = compare.find(c => c.current).prob;
+  const compareRows = compare.map(c => {
+    const pct = (c.prob * 100).toFixed(1);
+    const tCls = tierBadgeClassOf(c.tier);
+    const tLabel = tierLabelOf(c.tier);
+    let delta = '';
+    if (!c.current) {
+      const d = (c.prob - currentProb) * 100;
+      const arrow = d > 0 ? '↑' : d < 0 ? '↓' : '→';
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : '';
+      delta = `<span class="delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}%</span>`;
+    }
+    return `<tr class="${c.current ? 'current' : ''}">
+      <td>${t.surgLabels[c.surg]}</td>
+      <td><strong>${pct}%</strong>${delta}</td>
+      <td><span class="tier-badge ${tCls}">${tLabel}</span></td>
+    </tr>`;
+  }).join('');
+
+  const recordText = t.recordTpl({
+    prob: probPct, tier: tierLabel,
+    icg, albi: albi.toFixed(3), fib4: fib4.toFixed(2),
+    age, bmi, bclc, surgLabel: t.surgLabels[surg],
+    adviceTitle: advice.title
+  });
+
+  // 分级定义面板
+  const tierDefPanel = showTierDef ? `
+    <div class="tier-def-panel">
+      <h5>${t.tierDefTitle}</h5>
+      <div class="tier-def-row">
+        <span class="tier-badge low">${t.tierLow}</span>
+        <span><strong>${t.tierDefLow[0]}</strong></span>
+        <span>${t.tierDefLow[1]}</span>
+      </div>
+      <div class="tier-def-row">
+        <span class="tier-badge mod">${t.tierMod}</span>
+        <span><strong>${t.tierDefMod[0]}</strong></span>
+        <span>${t.tierDefMod[1]}</span>
+      </div>
+      <div class="tier-def-row">
+        <span class="tier-badge high">${t.tierHigh}</span>
+        <span><strong>${t.tierDefHigh[0]}</strong></span>
+        <span>${t.tierDefHigh[1]}</span>
+      </div>
+      <div class="tier-def-row">
+        <span class="tier-badge extreme">${t.tierExtreme}</span>
+        <span><strong>${t.tierDefExtreme[0]}</strong></span>
+        <span>${t.tierDefExtreme[1]}</span>
+      </div>
+    </div>
+  ` : '';
+
+  document.getElementById('resultPanel').innerHTML = `
+    <div class="risk-box ${tierClassOf(tier)}">
+      <button class="risk-def-btn" onclick="toggleTierDef()">${t.defBtn}</button>
+      <div class="risk-prob">${probPct}%</div>
+      <div class="risk-label">${tierLabel} | ${t.resultLabel}</div>
+      <div class="risk-ci">${t.ciLabel} ${ciLo}% - ${ciHi}%</div>
+    </div>
+    ${tierDefPanel}
+    <div class="panel">
+      <h3>${t.compareTitle}</h3>
+      <table class="compare-table">
+        <thead><tr>
+          <th>${t.thSurg}</th><th>${t.thProb}</th><th>${t.thTier}</th>
+        </tr></thead>
+        <tbody>${compareRows}</tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>${t.adviceTitle}: ${advice.title}</h3>
+      <ul class="advice-list">
+        ${advice.items.map(it => `<li>${it}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>${t.recordTitle}</h3>
+      <div class="record-box">${recordText}</div>
+    </div>
+  `;
+}
+
+bindPair('icgNum','icgSlider');
+bindPair('albNum','albSlider', updateAlbi);
+bindPair('tbilNum','tbilSlider', updateAlbi);
+bindPair('astNum','astSlider', updateFib4);
+bindPair('altNum','altSlider', updateFib4);
+bindPair('pltNum','pltSlider', updateFib4);
+bindPair('ageNum','ageSlider', updateFib4);
+bindPair('bmiNum','bmiSlider');
+updateAlbi();
+updateFib4();
 </script>
 </body>
 </html>
